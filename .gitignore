@@ -1,15 +1,5 @@
-# Credentials & secrets
-credentials.json
-token.json
-.env
-
-# Python
+.venv/
 __pycache__/
 *.pyc
-venv/
-
-# OS
-.DS_Store
-
-# Claude
-.claude/
+*.pyo
+token.json
