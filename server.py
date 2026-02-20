@@ -148,7 +148,6 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify',    # NEW: for labels/modify
     'https://www.googleapis.com/auth/gmail.labels',    # NEW: for label management
     'https://www.googleapis.com/auth/presentations',
-    'https://www.googleapis.com/auth/tasks'              # v11: Google Tasks
 ]
 
 # Paths for credentials
@@ -168,7 +167,6 @@ class GoogleWorkspaceClient:
         self._calendar_service = None
         self._gmail_service = None
         self._slides_service = None
-        self._tasks_service = None
 
     def authenticate(self) -> bool:
         """Authenticate with Google APIs using OAuth2."""
@@ -230,13 +228,6 @@ class GoogleWorkspaceClient:
         if not self._slides_service:
             self._slides_service = build('slides', 'v1', credentials=self.creds)
         return self._slides_service
-
-    @property
-    def tasks_service(self):
-        if not self._tasks_service:
-            self._tasks_service = build('tasks', 'v1', credentials=self.creds)
-        return self._tasks_service
-
 
 google_client = GoogleWorkspaceClient()
 server = Server("google-workspace-mcp")
@@ -1450,160 +1441,8 @@ async def list_tools() -> list[Tool]:
                 "required": ["presentation_id"]
             }
         ),
-
-        # ==================== GOOGLE TASKS ====================
-        # NEW in v11: Task List Management
-        Tool(
-            name="tasks_list_tasklists",
-            description="List all task lists. Returns ID, title, and updated timestamp for each list.",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-            }
-        ),
-        Tool(
-            name="tasks_create_tasklist",
-            description="Create a new task list",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string", "description": "Title of the new task list"}
-                },
-                "required": ["title"]
-            }
-        ),
-        Tool(
-            name="tasks_delete_tasklist",
-            description="Delete a task list",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "The task list ID"}
-                },
-                "required": ["tasklist_id"]
-            }
-        ),
-        # NEW in v11: Task CRUD
-        Tool(
-            name="tasks_list_tasks",
-            description="List tasks in a task list. Use @default for the user's default task list.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"},
-                    "show_completed": {"type": "boolean", "description": "Show completed tasks (default true)"},
-                    "show_hidden": {"type": "boolean", "description": "Show hidden/deleted tasks (default false)"},
-                    "due_min": {"type": "string", "description": "Filter: minimum due date (RFC 3339, e.g. '2025-01-01T00:00:00Z')"},
-                    "due_max": {"type": "string", "description": "Filter: maximum due date (RFC 3339)"},
-                    "max_results": {"type": "integer", "description": "Maximum number of tasks to return (default 100)"}
-                },
-            }
-        ),
-        Tool(
-            name="tasks_get_task",
-            description="Get a specific task by ID",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"},
-                    "task_id": {"type": "string", "description": "The task ID"}
-                },
-                "required": ["task_id"]
-            }
-        ),
-        Tool(
-            name="tasks_create_task",
-            description="Create a new task. Set parent to make it a subtask.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"},
-                    "title": {"type": "string", "description": "Task title"},
-                    "notes": {"type": "string", "description": "Task notes/description"},
-                    "due": {"type": "string", "description": "Due date (RFC 3339, e.g. '2025-06-15T00:00:00Z')"},
-                    "parent": {"type": "string", "description": "Parent task ID to create as subtask"}
-                },
-                "required": ["title"]
-            }
-        ),
-        Tool(
-            name="tasks_update_task",
-            description="Update an existing task. Only provided fields are updated. Status can be 'needsAction' or 'completed'.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"},
-                    "task_id": {"type": "string", "description": "The task ID"},
-                    "title": {"type": "string", "description": "New title"},
-                    "notes": {"type": "string", "description": "New notes/description"},
-                    "due": {"type": "string", "description": "New due date (RFC 3339)"},
-                    "status": {"type": "string", "description": "Status: 'needsAction' or 'completed'"}
-                },
-                "required": ["task_id"]
-            }
-        ),
-        Tool(
-            name="tasks_delete_task",
-            description="Delete a task",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"},
-                    "task_id": {"type": "string", "description": "The task ID"}
-                },
-                "required": ["task_id"]
-            }
-        ),
-        # NEW in v11: Task Actions
-        Tool(
-            name="tasks_complete_task",
-            description="Mark a task as completed (convenience wrapper)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"},
-                    "task_id": {"type": "string", "description": "The task ID"}
-                },
-                "required": ["task_id"]
-            }
-        ),
-        Tool(
-            name="tasks_move_task",
-            description="Reorder a task or make it a subtask. Set parent to move under another task. Set previous to place after a specific task.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"},
-                    "task_id": {"type": "string", "description": "The task ID to move"},
-                    "parent": {"type": "string", "description": "Parent task ID (move as subtask under this task, or omit to move to top level)"},
-                    "previous": {"type": "string", "description": "Previous sibling task ID (place after this task)"}
-                },
-                "required": ["task_id"]
-            }
-        ),
-        Tool(
-            name="tasks_clear_completed",
-            description="Clear all completed tasks from a task list",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tasklist_id": {"type": "string", "description": "Task list ID (default: '@default')"}
-                },
-            }
-        ),
-        Tool(
-            name="tasks_search_tasks",
-            description="Search tasks across all task lists by keyword (matches title and notes)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Search keyword"},
-                    "show_completed": {"type": "boolean", "description": "Include completed tasks in search (default true)"}
-                },
-                "required": ["query"]
-            }
-        )
     ]
+
 
 
 @server.call_tool()
@@ -1800,31 +1639,6 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         elif name == "slides_get_details":
             return await get_slides_details(arguments)
 
-        # Google Tasks (v11)
-        elif name == "tasks_list_tasklists":
-            return await list_tasklists(arguments)
-        elif name == "tasks_create_tasklist":
-            return await create_tasklist(arguments)
-        elif name == "tasks_delete_tasklist":
-            return await delete_tasklist(arguments)
-        elif name == "tasks_list_tasks":
-            return await list_tasks(arguments)
-        elif name == "tasks_get_task":
-            return await get_task(arguments)
-        elif name == "tasks_create_task":
-            return await create_task(arguments)
-        elif name == "tasks_update_task":
-            return await update_task(arguments)
-        elif name == "tasks_delete_task":
-            return await delete_task(arguments)
-        elif name == "tasks_complete_task":
-            return await complete_task(arguments)
-        elif name == "tasks_move_task":
-            return await move_task(arguments)
-        elif name == "tasks_clear_completed":
-            return await clear_completed_tasks(arguments)
-        elif name == "tasks_search_tasks":
-            return await search_tasks(arguments)
 
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
@@ -4079,245 +3893,6 @@ async def get_slides_details(args: dict) -> list[TextContent]:
     return [TextContent(type="text", text="\n".join(output))]
 
 
-# ==================== GOOGLE TASKS HANDLERS ====================
-
-async def list_tasklists(args: dict) -> list[TextContent]:
-    results = google_client.tasks_service.tasklists().list().execute()
-    tasklists = results.get('items', [])
-
-    if not tasklists:
-        return [TextContent(type="text", text="No task lists found.")]
-
-    output = []
-    for tl in tasklists:
-        output.append({
-            "id": tl.get("id"),
-            "title": tl.get("title"),
-            "updated": tl.get("updated")
-        })
-
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
-
-
-async def create_tasklist(args: dict) -> list[TextContent]:
-    body = {"title": args["title"]}
-    result = google_client.tasks_service.tasklists().insert(body=body).execute()
-
-    return [TextContent(type="text", text=json.dumps({
-        "id": result.get("id"),
-        "title": result.get("title"),
-        "updated": result.get("updated")
-    }, indent=2))]
-
-
-async def delete_tasklist(args: dict) -> list[TextContent]:
-    google_client.tasks_service.tasklists().delete(tasklist=args["tasklist_id"]).execute()
-    return [TextContent(type="text", text=f"Deleted task list {args['tasklist_id']}")]
-
-
-async def list_tasks(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-    params = {"tasklist": tasklist_id}
-
-    show_completed = args.get("show_completed", True)
-    if not show_completed:
-        params["showCompleted"] = False
-
-    if args.get("show_hidden"):
-        params["showHidden"] = True
-
-    if args.get("due_min"):
-        params["dueMin"] = args["due_min"]
-
-    if args.get("due_max"):
-        params["dueMax"] = args["due_max"]
-
-    params["maxResults"] = args.get("max_results", 100)
-
-    results = google_client.tasks_service.tasks().list(**params).execute()
-    tasks = results.get('items', [])
-
-    if not tasks:
-        return [TextContent(type="text", text="No tasks found.")]
-
-    output = []
-    for task in tasks:
-        entry = {
-            "id": task.get("id"),
-            "title": task.get("title"),
-            "status": task.get("status"),
-            "due": task.get("due"),
-            "notes": task.get("notes"),
-            "parent": task.get("parent"),
-            "updated": task.get("updated")
-        }
-        # Remove None values for cleaner output
-        entry = {k: v for k, v in entry.items() if v is not None}
-        output.append(entry)
-
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
-
-
-async def get_task(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-    result = google_client.tasks_service.tasks().get(
-        tasklist=tasklist_id, task=args["task_id"]
-    ).execute()
-
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-
-
-async def create_task(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-
-    body = {"title": args["title"]}
-    if args.get("notes"):
-        body["notes"] = args["notes"]
-    if args.get("due"):
-        body["due"] = args["due"]
-
-    params = {"tasklist": tasklist_id, "body": body}
-    if args.get("parent"):
-        params["parent"] = args["parent"]
-
-    result = google_client.tasks_service.tasks().insert(**params).execute()
-
-    return [TextContent(type="text", text=json.dumps({
-        "id": result.get("id"),
-        "title": result.get("title"),
-        "status": result.get("status"),
-        "due": result.get("due"),
-        "notes": result.get("notes"),
-        "parent": result.get("parent")
-    }, indent=2))]
-
-
-async def update_task(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-
-    # Get the current task first
-    task = google_client.tasks_service.tasks().get(
-        tasklist=tasklist_id, task=args["task_id"]
-    ).execute()
-
-    # Update only provided fields
-    if "title" in args:
-        task["title"] = args["title"]
-    if "notes" in args:
-        task["notes"] = args["notes"]
-    if "due" in args:
-        task["due"] = args["due"]
-    if "status" in args:
-        task["status"] = args["status"]
-        if args["status"] == "needsAction":
-            # Clear completed date when reopening
-            task.pop("completed", None)
-
-    result = google_client.tasks_service.tasks().update(
-        tasklist=tasklist_id, task=args["task_id"], body=task
-    ).execute()
-
-    return [TextContent(type="text", text=json.dumps({
-        "id": result.get("id"),
-        "title": result.get("title"),
-        "status": result.get("status"),
-        "due": result.get("due"),
-        "notes": result.get("notes"),
-        "updated": result.get("updated")
-    }, indent=2))]
-
-
-async def delete_task(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-    google_client.tasks_service.tasks().delete(
-        tasklist=tasklist_id, task=args["task_id"]
-    ).execute()
-    return [TextContent(type="text", text=f"Deleted task {args['task_id']}")]
-
-
-async def complete_task(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-
-    task = google_client.tasks_service.tasks().get(
-        tasklist=tasklist_id, task=args["task_id"]
-    ).execute()
-
-    task["status"] = "completed"
-
-    result = google_client.tasks_service.tasks().update(
-        tasklist=tasklist_id, task=args["task_id"], body=task
-    ).execute()
-
-    return [TextContent(type="text", text=json.dumps({
-        "id": result.get("id"),
-        "title": result.get("title"),
-        "status": result.get("status"),
-        "completed": result.get("completed")
-    }, indent=2))]
-
-
-async def move_task(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-
-    params = {"tasklist": tasklist_id, "task": args["task_id"]}
-    if args.get("parent"):
-        params["parent"] = args["parent"]
-    if args.get("previous"):
-        params["previous"] = args["previous"]
-
-    result = google_client.tasks_service.tasks().move(**params).execute()
-
-    return [TextContent(type="text", text=json.dumps({
-        "id": result.get("id"),
-        "title": result.get("title"),
-        "parent": result.get("parent"),
-        "position": result.get("position")
-    }, indent=2))]
-
-
-async def clear_completed_tasks(args: dict) -> list[TextContent]:
-    tasklist_id = args.get("tasklist_id", "@default")
-    google_client.tasks_service.tasks().clear(tasklist=tasklist_id).execute()
-    return [TextContent(type="text", text=f"Cleared completed tasks from list {tasklist_id}")]
-
-
-async def search_tasks(args: dict) -> list[TextContent]:
-    query = args["query"].lower()
-    show_completed = args.get("show_completed", True)
-
-    # Get all task lists
-    tasklists_result = google_client.tasks_service.tasklists().list().execute()
-    tasklists = tasklists_result.get('items', [])
-
-    matches = []
-    for tl in tasklists:
-        params = {"tasklist": tl["id"], "maxResults": 100}
-        if not show_completed:
-            params["showCompleted"] = False
-
-        tasks_result = google_client.tasks_service.tasks().list(**params).execute()
-        tasks = tasks_result.get('items', [])
-
-        for task in tasks:
-            title = (task.get("title") or "").lower()
-            notes = (task.get("notes") or "").lower()
-            if query in title or query in notes:
-                matches.append({
-                    "tasklist_id": tl["id"],
-                    "tasklist_title": tl["title"],
-                    "id": task.get("id"),
-                    "title": task.get("title"),
-                    "status": task.get("status"),
-                    "due": task.get("due"),
-                    "notes": task.get("notes")
-                })
-
-    if not matches:
-        return [TextContent(type="text", text=f"No tasks found matching '{args['query']}'")]
-
-    return [TextContent(type="text", text=json.dumps(matches, indent=2))]
-
-
 # ==================== MAIN ====================
 
 async def main():
@@ -4325,9 +3900,8 @@ async def main():
         logger.error("Failed to authenticate")
         return
 
-    logger.info("Google Workspace MCP Server (v12 - Shared Drive Support) starting...")
-    logger.info("New v11 tools: tasks_list_tasklists, tasks_create_tasklist, tasks_delete_tasklist, tasks_list_tasks, tasks_get_task, tasks_create_task, tasks_update_task, tasks_delete_task, tasks_complete_task, tasks_move_task, tasks_clear_completed, tasks_search_tasks")
-    logger.info("🎉 98 total tools across 7 Google Workspace APIs 🎉")
+    logger.info("Google Workspace MCP Server (v12 - ReisierX build, Tasks removed) starting...")
+    logger.info("🎉 86 total tools across 6 Google Workspace APIs 🎉")
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
