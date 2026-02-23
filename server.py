@@ -1186,7 +1186,8 @@ async def list_tools() -> list[Tool]:
                     "description": {"type": "string", "description": "Event description"},
                     "start_time": {"type": "string", "description": "Start time (ISO format)"},
                     "end_time": {"type": "string", "description": "End time (ISO format)"},
-                    "attendees": {"type": "array", "items": {"type": "string"}, "description": "Attendee emails"}
+                    "attendees": {"type": "array", "items": {"type": "string"}, "description": "Attendee emails"},
+                    "recurrence": {"type": "array", "items": {"type": "string"}, "description": "Recurrence rules in RRULE format (e.g. ['RRULE:FREQ=WEEKLY;BYDAY=MO'])"}
                 },
                 "required": ["summary", "start_time", "end_time"]
             }
@@ -1203,7 +1204,8 @@ async def list_tools() -> list[Tool]:
                     "start_time": {"type": "string", "description": "New start time (ISO format)"},
                     "end_time": {"type": "string", "description": "New end time (ISO format)"},
                     "location": {"type": "string", "description": "Event location"},
-                    "attendees": {"type": "array", "items": {"type": "string"}, "description": "New list of attendee emails"}
+                    "attendees": {"type": "array", "items": {"type": "string"}, "description": "New list of attendee emails"},
+                    "recurrence": {"type": "array", "items": {"type": "string"}, "description": "Recurrence rules in RRULE format (e.g. ['RRULE:FREQ=WEEKLY;BYDAY=MO'])"}
                 },
                 "required": ["event_id"]
             }
@@ -3414,6 +3416,9 @@ async def create_calendar_event(args: dict) -> list[TextContent]:
     if "attendees" in args:
         event['attendees'] = [{'email': email} for email in args["attendees"]]
 
+    if "recurrence" in args:
+        event['recurrence'] = args["recurrence"]
+
     created = google_client.calendar_service.events().insert(calendarId='primary', body=event).execute()
     return [TextContent(type="text", text=f"Created event '{args['summary']}'\nID: {created.get('id')}\nLink: {created.get('htmlLink')}")]
 
@@ -3438,6 +3443,9 @@ async def update_calendar_event(args: dict) -> list[TextContent]:
         event['end'] = {'dateTime': args['end_time'], 'timeZone': 'UTC'}
     if args.get('attendees'):
         event['attendees'] = [{'email': email} for email in args['attendees']]
+
+    if args.get('recurrence'):
+        event['recurrence'] = args['recurrence']
 
     updated = google_client.calendar_service.events().update(
         calendarId='primary',
