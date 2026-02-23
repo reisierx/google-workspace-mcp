@@ -3419,7 +3419,7 @@ async def create_calendar_event(args: dict) -> list[TextContent]:
     if "recurrence" in args:
         event['recurrence'] = args["recurrence"]
 
-    created = google_client.calendar_service.events().insert(calendarId='primary', body=event).execute()
+    created = google_client.calendar_service.events().insert(calendarId='primary', body=event, sendUpdates='all').execute()
     return [TextContent(type="text", text=f"Created event '{args['summary']}'\nID: {created.get('id')}\nLink: {created.get('htmlLink')}")]
 
 
@@ -3450,7 +3450,8 @@ async def update_calendar_event(args: dict) -> list[TextContent]:
     updated = google_client.calendar_service.events().update(
         calendarId='primary',
         eventId=args['event_id'],
-        body=event
+        body=event,
+        sendUpdates='all'
     ).execute()
 
     return [TextContent(type="text", text=f"Updated event '{updated.get('summary')}'\nLink: {updated.get('htmlLink')}")]
